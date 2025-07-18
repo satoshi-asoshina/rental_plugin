@@ -415,4 +415,345 @@ class RentalPaymentException extends RentalException
         );
         
         return $exception->setGatewayErrorCode($gatewayCode)
-                         ->setGatewayErrorMessage($gatewayMessage
+                         ->setGatewayErrorMessage($gatewayMessage)
+                         ->setRetryable(true);
+    }
+
+    /**
+     * 無効な金額エラーを作成
+     *
+     * @param string $amount
+     * @param string $paymentMethod
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createInvalidAmountError(
+        string $amount,
+        string $paymentMethod = '',
+        string $transactionId = null
+    ): self {
+        return (new self(
+            sprintf('無効な金額です: %s', $amount),
+            self::ERROR_INVALID_AMOUNT,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($amount);
+    }
+
+    /**
+     * 対応していない通貨エラーを作成
+     *
+     * @param string $currency
+     * @param string $paymentMethod
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createCurrencyNotSupportedError(
+        string $currency,
+        string $paymentMethod = '',
+        string $transactionId = null
+    ): self {
+        return (new self(
+            sprintf('対応していない通貨です: %s', $currency),
+            self::ERROR_CURRENCY_NOT_SUPPORTED,
+            $paymentMethod,
+            $transactionId
+        ))->setCurrency($currency);
+    }
+
+    /**
+     * 決済方法が利用できないエラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createPaymentMethodNotAvailableError(
+        string $paymentMethod,
+        string $transactionId = null
+    ): self {
+        return new self(
+            sprintf('決済方法「%s」は現在利用できません。', $paymentMethod),
+            self::ERROR_PAYMENT_METHOD_NOT_AVAILABLE,
+            $paymentMethod,
+            $transactionId
+        );
+    }
+
+    /**
+     * 返金失敗エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $amount
+     * @param string $reason
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createRefundFailedError(
+        string $paymentMethod,
+        string $amount,
+        string $reason = '',
+        string $transactionId = null
+    ): self {
+        $message = sprintf('返金処理に失敗しました。金額: %s', $amount);
+        if ($reason) {
+            $message .= ' 理由: ' . $reason;
+        }
+
+        return (new self(
+            $message,
+            self::ERROR_REFUND_FAILED,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($amount);
+    }
+
+    /**
+     * 部分返金不可エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $requestedAmount
+     * @param string $totalAmount
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createPartialRefundNotAllowedError(
+        string $paymentMethod,
+        string $requestedAmount,
+        string $totalAmount,
+        string $transactionId = null
+    ): self {
+        return (new self(
+            sprintf(
+                'この決済方法では部分返金はできません。要求額: %s, 総額: %s',
+                $requestedAmount,
+                $totalAmount
+            ),
+            self::ERROR_PARTIAL_REFUND_NOT_ALLOWED,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($requestedAmount);
+    }
+
+    /**
+     * 返金期限切れエラーを作成
+     *
+     * @param string $paymentMethod
+     * @param \DateTime $deadline
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createRefundDeadlineExpiredError(
+        string $paymentMethod,
+        \DateTime $deadline,
+        string $transactionId = null
+    ): self {
+        return (new self(
+            sprintf('返金期限を過ぎています。期限: %s', $deadline->format('Y-m-d H:i:s')),
+            self::ERROR_REFUND_DEADLINE_EXPIRED,
+            $paymentMethod,
+            $transactionId
+        ))->addContext('deadline', $deadline->format('Y-m-d H:i:s'));
+    }
+
+    /**
+     * 重複取引エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $duplicateTransactionId
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createDuplicateTransactionError(
+        string $paymentMethod,
+        string $duplicateTransactionId,
+        string $transactionId = null
+    ): self {
+        return (new self(
+            '重複する取引が検出されました。',
+            self::ERROR_DUPLICATE_TRANSACTION,
+            $paymentMethod,
+            $transactionId
+        ))->addContext('duplicate_transaction_id', $duplicateTransactionId);
+    }
+
+    /**
+     * チャージバックエラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $amount
+     * @param string $reason
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createChargebackError(
+        string $paymentMethod,
+        string $amount,
+        string $reason = '',
+        string $transactionId = null
+    ): self {
+        $message = sprintf('チャージバックが発生しました。金額: %s', $amount);
+        if ($reason) {
+            $message .= ' 理由: ' . $reason;
+        }
+
+        return (new self(
+            $message,
+            self::ERROR_CHARGEBACK,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($amount)
+           ->setErrorLevel(self::LEVEL_ERROR);
+    }
+
+    /**
+     * 不正検知エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $riskScore
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createFraudDetectedError(
+        string $paymentMethod,
+        string $riskScore = '',
+        string $transactionId = null
+    ): self {
+        $message = '不正な取引の可能性が検出されました。';
+        if ($riskScore) {
+            $message .= sprintf(' リスクスコア: %s', $riskScore);
+        }
+
+        return (new self(
+            $message,
+            self::ERROR_FRAUD_DETECTED,
+            $paymentMethod,
+            $transactionId
+        ))->setErrorLevel(self::LEVEL_ERROR)
+           ->addContext('risk_score', $riskScore);
+    }
+
+    /**
+     * 保証金決済失敗エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $depositAmount
+     * @param string $reason
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createDepositFailedError(
+        string $paymentMethod,
+        string $depositAmount,
+        string $reason = '',
+        string $transactionId = null
+    ): self {
+        $message = sprintf('保証金の決済に失敗しました。金額: %s', $depositAmount);
+        if ($reason) {
+            $message .= ' 理由: ' . $reason;
+        }
+
+        return (new self(
+            $message,
+            self::ERROR_DEPOSIT_FAILED,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($depositAmount);
+    }
+
+    /**
+     * 保証金返却失敗エラーを作成
+     *
+     * @param string $paymentMethod
+     * @param string $depositAmount
+     * @param string $reason
+     * @param string|null $transactionId
+     * @return self
+     */
+    public static function createDepositReleaseFailedError(
+        string $paymentMethod,
+        string $depositAmount,
+        string $reason = '',
+        string $transactionId = null
+    ): self {
+        $message = sprintf('保証金の返却に失敗しました。金額: %s', $depositAmount);
+        if ($reason) {
+            $message .= ' 理由: ' . $reason;
+        }
+
+        return (new self(
+            $message,
+            self::ERROR_DEPOSIT_RELEASE_FAILED,
+            $paymentMethod,
+            $transactionId
+        ))->setAmount($depositAmount);
+    }
+
+    /**
+     * エラー情報を配列で取得（拡張版）
+     *
+     * @return array
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        $array['payment_method'] = $this->paymentMethod;
+        $array['transaction_id'] = $this->transactionId;
+        $array['amount'] = $this->amount;
+        $array['currency'] = $this->currency;
+        $array['gateway_error_code'] = $this->gatewayErrorCode;
+        $array['gateway_error_message'] = $this->gatewayErrorMessage;
+        $array['payment_details'] = $this->paymentDetails;
+        $array['retryable'] = $this->retryable;
+        
+        return $array;
+    }
+
+    /**
+     * 決済復旧可能かどうか
+     *
+     * @return bool
+     */
+    public function isRecoverable(): bool
+    {
+        $recoverableCodes = [
+            self::ERROR_PAYMENT_TIMEOUT,
+            self::ERROR_PAYMENT_GATEWAY_ERROR,
+            self::ERROR_INVALID_CARD,
+            self::ERROR_EXPIRED_CARD,
+            self::ERROR_INVALID_CVV,
+        ];
+        
+        return in_array($this->getCode(), $recoverableCodes);
+    }
+
+    /**
+     * 緊急対応が必要かどうか
+     *
+     * @return bool
+     */
+    public function requiresUrgentAction(): bool
+    {
+        $urgentCodes = [
+            self::ERROR_CHARGEBACK,
+            self::ERROR_FRAUD_DETECTED,
+        ];
+        
+        return in_array($this->getCode(), $urgentCodes);
+    }
+
+    /**
+     * 顧客に表示可能なエラーかどうか
+     *
+     * @return bool
+     */
+    public function isCustomerDisplayable(): bool
+    {
+        $hiddenCodes = [
+            self::ERROR_FRAUD_DETECTED,
+            self::ERROR_CHARGEBACK,
+        ];
+        
+        return !in_array($this->getCode(), $hiddenCodes);
+    }
+}

@@ -17,4 +17,506 @@ services:
         tags:
             - { name: 'doctrine.repository_service' }
     
-    Plugin\
+    Plugin\Rental\Repository\RentalOrderRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\Rental\Repository\RentalCartRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\Rental\Repository\RentalInventoryRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\Rental\Repository\RentalPaymentRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\Rental\Repository\RentalLogRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+
+    # ========================================
+    # Service Layer
+    # ========================================
+    
+    Plugin\Rental\Service\RentalService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Repository\RentalCartRepository'
+            - '@Plugin\Rental\Repository\RentalInventoryRepository'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+            - '@Plugin\Rental\Service\RentalValidationService'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalCalculationService:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalValidationService:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Repository\RentalInventoryRepository'
+        public: true
+    
+    Plugin\Rental\Service\RentalInventoryService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalInventoryRepository'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalValidationService'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalPaymentService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalPaymentRepository'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalNotificationService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Eccube\Service\MailService'
+            - '@twig'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalLogService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalLogRepository'
+            - '@monolog.logger.plugin'
+        public: true
+    
+    Plugin\Rental\Service\RentalAnalyticsService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+        public: true
+    
+    Plugin\Rental\Service\RentalCacheService:
+        arguments:
+            - '@cache.app'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        public: true
+
+    Plugin\Rental\Service\RentalSecurityService:
+        arguments:
+            - '@security.token_storage'
+            - '@security.authorization_checker'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@monolog.logger.plugin'
+        public: true
+
+    Plugin\Rental\Service\RentalAuditService:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Service\RentalLogService'
+            - '@security.token_storage'
+        public: true
+
+    # ========================================
+    # Form Type サービス
+    # ========================================
+    
+    Plugin\Rental\Form\Type\RentalConfigType:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\RentalOrderType:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\RentalProductType:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\RentalCartType:
+        arguments:
+            - '@Plugin\Rental\Service\RentalCalculationService'
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\RentalPaymentType:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\RentalFrontType:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Service\RentalValidationService'
+        tags:
+            - { name: form.type }
+
+    # Admin Form Types
+    Plugin\Rental\Form\Type\Admin\RentalSearchType:
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\Admin\RentalReportType:
+        tags:
+            - { name: form.type }
+    
+    Plugin\Rental\Form\Type\Admin\RentalAnalyticsType:
+        tags:
+            - { name: form.type }
+
+    # Form Extensions
+    Plugin\Rental\Form\Extension\Admin\ProductTypeExtension:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+        tags:
+            - { name: form.type_extension, extended_type: Eccube\Form\Type\Admin\ProductType }
+
+    # ========================================
+    # Controller サービス
+    # ========================================
+    
+    # Admin Controllers
+    Plugin\Rental\Controller\Admin\RentalConfigController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@form.factory'
+            - '@session'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Admin\RentalController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalInventoryService'
+            - '@form.factory'
+            - '@session'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Admin\RentalReportController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalAnalyticsService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@form.factory'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Admin\RentalAnalyticsController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalAnalyticsService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+
+    # Front Controllers
+    Plugin\Rental\Controller\Front\RentalProductController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Service\RentalInventoryService'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+            - '@form.factory'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Front\RentalCartController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalCartRepository'
+            - '@Plugin\Rental\Service\RentalCalculationService'
+            - '@form.factory'
+            - '@session'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Front\RentalOrderController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalPaymentService'
+            - '@form.factory'
+            - '@session'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Front\RentalPaymentController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalPaymentService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@form.factory'
+            - '@session'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Front\RentalMyPageController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@security.token_storage'
+            - '@form.factory'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+
+    # API Controllers
+    Plugin\Rental\Controller\Api\RentalOrderController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@serializer'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Api\RentalInventoryController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalInventoryService'
+            - '@Plugin\Rental\Repository\RentalInventoryRepository'
+            - '@serializer'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+    
+    Plugin\Rental\Controller\Api\RentalPaymentController:
+        arguments:
+            - '@Plugin\Rental\Service\RentalPaymentService'
+            - '@Plugin\Rental\Repository\RentalPaymentRepository'
+            - '@serializer'
+        calls:
+            - [setContainer, ['@service_container']]
+        tags:
+            - { name: controller.service_arguments }
+
+    # ========================================
+    # Event Listener & Subscriber
+    # ========================================
+    
+    Plugin\Rental\EventListener\MyPageListener:
+        arguments:
+            - '@twig'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+        tags:
+            - { name: kernel.event_listener, event: '@Mypage/index.twig', method: onMypageRender }
+    
+    Plugin\Rental\EventListener\ProductDetailListener:
+        arguments:
+            - '@twig'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Service\RentalInventoryService'
+        tags:
+            - { name: kernel.event_listener, event: 'Product/detail.twig', method: onProductDetailRender }
+    
+    Plugin\Rental\EventListener\RentalOrderListener:
+        arguments:
+            - '@Plugin\Rental\Service\RentalNotificationService'
+            - '@Plugin\Rental\Service\RentalLogService'
+        tags:
+            - { name: kernel.event_listener, event: 'rental.order.created', method: onOrderCreated }
+            - { name: kernel.event_listener, event: 'rental.order.approved', method: onOrderApproved }
+            - { name: kernel.event_listener, event: 'rental.order.started', method: onOrderStarted }
+            - { name: kernel.event_listener, event: 'rental.order.returned', method: onOrderReturned }
+            - { name: kernel.event_listener, event: 'rental.order.cancelled', method: onOrderCancelled }
+    
+    Plugin\Rental\EventListener\RentalPaymentListener:
+        arguments:
+            - '@Plugin\Rental\Service\RentalLogService'
+            - '@Plugin\Rental\Service\RentalNotificationService'
+        tags:
+            - { name: kernel.event_listener, event: 'rental.payment.completed', method: onPaymentCompleted }
+            - { name: kernel.event_listener, event: 'rental.payment.failed', method: onPaymentFailed }
+            - { name: kernel.event_listener, event: 'rental.payment.refunded', method: onPaymentRefunded }
+    
+    Plugin\Rental\EventListener\RentalSecurityListener:
+        arguments:
+            - '@Plugin\Rental\Service\RentalSecurityService'
+            - '@Plugin\Rental\Service\RentalLogService'
+        tags:
+            - { name: kernel.event_listener, event: 'kernel.request', method: onKernelRequest }
+
+    Plugin\Rental\EventSubscriber\AdminProductSubscriber:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@Plugin\Rental\Repository\RentalInventoryRepository'
+            - '@Plugin\Rental\Service\RentalValidationService'
+        tags:
+            - { name: kernel.event_subscriber }
+    
+    Plugin\Rental\EventSubscriber\RentalNotificationSubscriber:
+        arguments:
+            - '@Plugin\Rental\Service\RentalNotificationService'
+        tags:
+            - { name: kernel.event_subscriber }
+    
+    Plugin\Rental\EventSubscriber\RentalAuditSubscriber:
+        arguments:
+            - '@Plugin\Rental\Service\RentalAuditService'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # ========================================
+    # Twig Extension
+    # ========================================
+    
+    Plugin\Rental\Twig\Extension\RentalExtension:
+        arguments:
+            - '@Plugin\Rental\Service\RentalCalculationService'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+        tags:
+            - { name: twig.extension }
+
+    # ========================================
+    # Template Hook
+    # ========================================
+    
+    Plugin\Rental\TemplateHook\Admin\ProductEditHook:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalProductRepository'
+            - '@form.factory'
+        tags:
+            - { name: eccube.template_hook, hook_point: 'admin_product_edit_complete' }
+
+    # ========================================
+    # Command Services (CLI)
+    # ========================================
+    
+    Plugin\Rental\Command\RentalOverdueCheckCommand:
+        arguments:
+            - '@Plugin\Rental\Service\RentalService'
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalNotificationService'
+        tags:
+            - { name: console.command }
+    
+    Plugin\Rental\Command\RentalReminderCommand:
+        arguments:
+            - '@Plugin\Rental\Repository\RentalOrderRepository'
+            - '@Plugin\Rental\Service\RentalNotificationService'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        tags:
+            - { name: console.command }
+    
+    Plugin\Rental\Command\RentalCleanupCommand:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+            - '@Plugin\Rental\Repository\RentalLogRepository'
+            - '@Plugin\Rental\Repository\RentalConfigRepository'
+        tags:
+            - { name: console.command }
+
+    # ========================================
+    # Security Services
+    # ========================================
+    
+    Plugin\Rental\Security\RentalVoter:
+        arguments:
+            - '@security.access.decision_manager'
+        tags:
+            - { name: security.voter }
+
+    # ========================================
+    # Custom Services
+    # ========================================
+    
+    # 料金計算エンジン
+    rental.calculation_engine:
+        alias: Plugin\Rental\Service\RentalCalculationService
+        public: true
+    
+    # レンタル設定マネージャー
+    rental.config_manager:
+        alias: Plugin\Rental\Repository\RentalConfigRepository
+        public: true
+    
+    # レンタルキャッシュ
+    rental.cache:
+        alias: Plugin\Rental\Service\RentalCacheService
+        public: true
+
+    # ========================================
+    # Parameter Settings
+    # ========================================
+
+parameters:
+    # レンタルプラグイン設定
+    rental.upload_dir: '%kernel.project_dir%/html/upload/rental'
+    rental.template_dir: '%kernel.project_dir%/app/Plugin/Rental/Resource/template'
+    rental.log_dir: '%kernel.project_dir%/var/log/rental'
+    
+    # デフォルト設定値
+    rental.default.max_rental_days: 30
+    rental.default.min_rental_days: 1
+    rental.default.reminder_days: 3
+    rental.default.overdue_fee_rate: 0.1
+    
+    # キャッシュ設定
+    rental.cache.ttl: 3600  # 1時間
+    rental.cache.prefix: 'rental_'
+    
+    # セキュリティ設定
+    rental.security.max_login_attempts: 5
+    rental.security.lockout_duration: 1800  # 30分
+    
+    # ファイルアップロード設定
+    rental.upload.max_size: 10485760  # 10MB
+    rental.upload.allowed_extensions: ['jpg', 'jpeg', 'png', 'gif', 'pdf']
+    
+    # 決済設定
+    rental.payment.timeout: 300  # 5分
+    rental.payment.retry_attempts: 3

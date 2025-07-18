@@ -88,6 +88,47 @@ class Version20250515000000 extends AbstractMigration
         
         // レンタル期間の論理チェック
         $this->addSql("
+            CREATE TRIGGER IF NOT EXISTS rental_order_period_check
+            BEFORE INSERT ON plg_rental_order
+            FOR EACH ROW
+            BEGIN
+                SELECT CASE
+                    WHEN NEW.rental_start_date >= NEW.rental_end_date THEN
+                        RAISE(ABORT, 'レンタル開始日は終了日より前である必要があります')
+                END;
+            END
+        ");
+
+        $this->addSql("
+            CREATE TRIGGER IF NOT EXISTS rental_order_period_check_update
+            BEFORE UPDATE ON plg_rental_order
+            FOR EACH ROW
+            BEGIN
+                SELECT CASE
+                    WHEN NEW.rental_start_date >= NEW.rental_end_date THEN
+                        RAISE(ABORT, 'レンタル開始日は終了日より前である必要があります')
+                END;
+            END
+        ");
+
+        // 金額の非負チェック
+        $this->addSql("
+            CREATE TRIGGER IF NOT EXISTS rental_order_amount_check
+            BEFORE INSERT ON plg_rental_order
+            FOR EACH ROW
+            BEGIN
+                SELECT CASE
+                    WHEN NEW.total_amount < 0 THEN
+                        RAISE(ABORT, '合計金額は0以上である必要があります')
+                    WHEN NEW.deposit_amount < 0 THEN
+                        RAISE(ABORT, '保証金額は0以上である必要があります')
+                    WHEN NEW.overdue_fee < 0 THEN
+                        RAISE(ABORT, '延滞料金は0以上である必要があります')
+                END;
+            END
+        ");
+
+        $this->addSql("
             CREATE TRIGGER IF NOT EXISTS rental_order_amount_check_update
             BEFORE UPDATE ON plg_rental_order
             FOR EACH ROW
@@ -388,44 +429,3 @@ class Version20250515000000 extends AbstractMigration
         return 'レンタル管理プラグイン - インデックス・制約・ビュー・トリガー追加';
     }
 }
-            CREATE TRIGGER IF NOT EXISTS rental_order_period_check
-            BEFORE INSERT ON plg_rental_order
-            FOR EACH ROW
-            BEGIN
-                SELECT CASE
-                    WHEN NEW.rental_start_date >= NEW.rental_end_date THEN
-                        RAISE(ABORT, 'レンタル開始日は終了日より前である必要があります')
-                END;
-            END
-        ");
-
-        $this->addSql("
-            CREATE TRIGGER IF NOT EXISTS rental_order_period_check_update
-            BEFORE UPDATE ON plg_rental_order
-            FOR EACH ROW
-            BEGIN
-                SELECT CASE
-                    WHEN NEW.rental_start_date >= NEW.rental_end_date THEN
-                        RAISE(ABORT, 'レンタル開始日は終了日より前である必要があります')
-                END;
-            END
-        ");
-
-        // 金額の非負チェック
-        $this->addSql("
-            CREATE TRIGGER IF NOT EXISTS rental_order_amount_check
-            BEFORE INSERT ON plg_rental_order
-            FOR EACH ROW
-            BEGIN
-                SELECT CASE
-                    WHEN NEW.total_amount < 0 THEN
-                        RAISE(ABORT, '合計金額は0以上である必要があります')
-                    WHEN NEW.deposit_amount < 0 THEN
-                        RAISE(ABORT, '保証金額は0以上である必要があります')
-                    WHEN NEW.overdue_fee < 0 THEN
-                        RAISE(ABORT, '延滞料金は0以上である必要があります')
-                END;
-            END
-        ");
-
-        $this->addSql("
