@@ -1,0 +1,20 @@
+# レンタル管理プラグイン サービス設定
+
+services:
+    # ========================================
+    # Repository サービス
+    # ========================================
+    
+    Plugin\Rental\Repository\RentalConfigRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\Rental\Repository\RentalProductRepository:
+        arguments:
+            - '@doctrine'
+        tags:
+            - { name: 'doctrine.repository_service' }
+    
+    Plugin\
