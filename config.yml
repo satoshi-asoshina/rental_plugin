@@ -1,0 +1,48 @@
+name: レンタル管理
+code: Rental
+version: 1.0.0
+service_class: Plugin\Rental\PluginManager
+event_class: Plugin\Rental\RentalPlugin
+
+# プラグイン基本情報
+description: |
+  EC-CUBE用レンタル管理プラグインです。
+  商品のレンタル注文、在庫管理、返却管理などの機能を提供します。
+
+# 対応バージョン
+supported_versions:
+  - "4.3"
+
+# 必要な権限
+permissions:
+  - ROLE_ADMIN
+  - ROLE_USER
+
+# プラグイン設定
+config:
+  # デフォルト設定値
+  defaults:
+    auto_approval: false
+    max_rental_days: 30
+    min_rental_days: 1
+    reminder_days: 3
+    overdue_fee_rate: 0.1
+    deposit_required: false
+    
+  # 管理画面設定
+  admin:
+    menu_name: "レンタル管理"
+    menu_icon: "fa-calendar"
+    
+  # フロント設定
+  front:
+    cart_enabled: true
+    guest_rental: false
+
+# データベース設定
+database:
+  # テーブルプレフィックス
+  table_prefix: "plg_rental_"
+  
+  # SQLite対応
+  sqlite_compatible: true

@@ -1,0 +1,32 @@
+{
+    "name": "ec-cube/rental-plugin",
+    "version": "1.0.0",
+    "description": "EC-CUBE レンタル管理プラグイン",
+    "type": "eccube-plugin",
+    "require": {
+        "ec-cube/plugin-installer": "~0.0.7 || ~2.0",
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.0"
+    },
+    "extra": {
+        "code": "Rental",
+        "name": "レンタル管理",
+        "version": "1.0.0",
+        "supported-versions": [
+            "4.3"
+        ]
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugin\\Rental\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Plugin\\Rental\\Tests\\": "Tests/"
+        }
+    }
+}
