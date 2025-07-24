@@ -13,7 +13,6 @@
 
 namespace Plugin\Rental;
 
-use Eccube\Plugin\AbstractPluginEventSubscriber;
 use Eccube\Event\TemplateEvent;
 use Eccube\Event\EccubeEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -24,7 +23,7 @@ use Symfony\Component\HttpKernel\Event\ControllerEvent;
  * 
  * プラグインのイベント処理とサービス登録を行います
  */
-class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscriberInterface
+class RentalPlugin implements EventSubscriberInterface
 {
     /**
      * プラグインで処理するイベントを定義
@@ -43,7 +42,6 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             // EC-CUBEイベント
             EccubeEvents::ADMIN_PRODUCT_EDIT_COMPLETE => 'onAdminProductEditComplete',
             EccubeEvents::FRONT_CART_ADD_COMPLETE => 'onCartAddComplete',
-            EccubeEvents::FRONT_MYPAGE_DELIVERY_EDIT_COMPLETE => 'onMypageComplete',
             
             // カーネルイベント
             'kernel.controller' => 'onKernelController',
@@ -67,10 +65,11 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             $event->addAsset('plugin_rental_admin.js');
             $event->addAsset('plugin_rental_admin.css');
             
-            log_info('管理画面商品編集テンプレート拡張完了');
+            // ログ出力（デバッグ用）
+            error_log('管理画面商品編集テンプレート拡張完了');
             
         } catch (\Exception $e) {
-            log_error('管理画面商品編集テンプレート拡張失敗', ['error' => $e->getMessage()]);
+            error_log('管理画面商品編集テンプレート拡張失敗: ' . $e->getMessage());
         }
     }
 
@@ -101,10 +100,10 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
                 }
             }
             
-            log_debug('商品詳細テンプレート拡張完了');
+            error_log('商品詳細テンプレート拡張完了');
             
         } catch (\Exception $e) {
-            log_error('商品詳細テンプレート拡張失敗', ['error' => $e->getMessage()]);
+            error_log('商品詳細テンプレート拡張失敗: ' . $e->getMessage());
         }
     }
 
@@ -119,10 +118,10 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             // レンタル履歴ナビゲーションを追加
             $event->addSnippet('@Rental/front/mypage_navi_add.twig');
             
-            log_debug('マイページテンプレート拡張完了');
+            error_log('マイページテンプレート拡張完了');
             
         } catch (\Exception $e) {
-            log_error('マイページテンプレート拡張失敗', ['error' => $e->getMessage()]);
+            error_log('マイページテンプレート拡張失敗: ' . $e->getMessage());
         }
     }
 
@@ -146,17 +145,17 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
                 }
             }
             
-            log_debug('カートテンプレート拡張完了');
+            error_log('カートテンプレート拡張完了');
             
         } catch (\Exception $e) {
-            log_error('カートテンプレート拡張失敗', ['error' => $e->getMessage()]);
+            error_log('カートテンプレート拡張失敗: ' . $e->getMessage());
         }
     }
 
     /**
      * 管理画面商品編集完了時の処理
      * 
-     * @param Event $event
+     * @param $event
      */
     public function onAdminProductEditComplete($event)
     {
@@ -170,17 +169,17 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
                 $this->saveRentalProductSettings($product, $rentalData);
             }
             
-            log_info('商品レンタル設定保存完了', ['product_id' => $product->getId()]);
+            error_log('商品レンタル設定保存完了 product_id: ' . $product->getId());
             
         } catch (\Exception $e) {
-            log_error('商品レンタル設定保存失敗', ['error' => $e->getMessage()]);
+            error_log('商品レンタル設定保存失敗: ' . $e->getMessage());
         }
     }
 
     /**
      * カート追加完了時の処理
      * 
-     * @param Event $event
+     * @param $event
      */
     public function onCartAddComplete($event)
     {
@@ -192,27 +191,11 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
                 $this->validateRentalStock($cartItem);
             }
             
-            log_debug('レンタル商品カート追加チェック完了');
+            error_log('レンタル商品カート追加チェック完了');
             
         } catch (\Exception $e) {
-            log_error('レンタル商品カート追加チェック失敗', ['error' => $e->getMessage()]);
+            error_log('レンタル商品カート追加チェック失敗: ' . $e->getMessage());
             throw $e; // 在庫不足などはエラーとして表示する必要がある
-        }
-    }
-
-    /**
-     * マイページ完了時の処理
-     * 
-     * @param Event $event
-     */
-    public function onMypageComplete($event)
-    {
-        try {
-            // レンタル関連の処理があれば実行
-            log_debug('マイページ処理完了');
-            
-        } catch (\Exception $e) {
-            log_error('マイページ処理失敗', ['error' => $e->getMessage()]);
         }
     }
 
@@ -237,23 +220,23 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             }
             
         } catch (\Exception $e) {
-            log_error('コントローラー前処理失敗', ['error' => $e->getMessage()]);
+            error_log('コントローラー前処理失敗: ' . $e->getMessage());
         }
     }
 
     /**
      * レスポンス処理
      * 
-     * @param Event $event
+     * @param $event
      */
     public function onKernelResponse($event)
     {
         try {
             // レンタル関連のレスポンス後処理
-            log_debug('レスポンス後処理完了');
+            error_log('レスポンス後処理完了');
             
         } catch (\Exception $e) {
-            log_error('レスポンス後処理失敗', ['error' => $e->getMessage()]);
+            error_log('レスポンス後処理失敗: ' . $e->getMessage());
         }
     }
 
@@ -270,7 +253,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             return null;
             
         } catch (\Exception $e) {
-            log_error('レンタル商品情報取得失敗', ['error' => $e->getMessage()]);
+            error_log('レンタル商品情報取得失敗: ' . $e->getMessage());
             return null;
         }
     }
@@ -288,7 +271,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             return false;
             
         } catch (\Exception $e) {
-            log_error('カート内レンタル商品チェック失敗', ['error' => $e->getMessage()]);
+            error_log('カート内レンタル商品チェック失敗: ' . $e->getMessage());
             return false;
         }
     }
@@ -296,17 +279,17 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
     /**
      * レンタル商品設定保存
      * 
-     * @param Product $product
+     * @param $product
      * @param array $rentalData
      */
     private function saveRentalProductSettings($product, $rentalData)
     {
         try {
             // TODO: レンタル設定保存処理実装
-            log_info('レンタル設定保存', ['product_id' => $product->getId()]);
+            error_log('レンタル設定保存 product_id: ' . $product->getId());
             
         } catch (\Exception $e) {
-            log_error('レンタル設定保存失敗', ['error' => $e->getMessage()]);
+            error_log('レンタル設定保存失敗: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -314,7 +297,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
     /**
      * レンタル商品判定
      * 
-     * @param Product $product
+     * @param $product
      * @return bool
      */
     private function isRentalProduct($product)
@@ -324,7 +307,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             return false;
             
         } catch (\Exception $e) {
-            log_error('レンタル商品判定失敗', ['error' => $e->getMessage()]);
+            error_log('レンタル商品判定失敗: ' . $e->getMessage());
             return false;
         }
     }
@@ -332,7 +315,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
     /**
      * レンタル在庫検証
      * 
-     * @param CartItem $cartItem
+     * @param $cartItem
      */
     private function validateRentalStock($cartItem)
     {
@@ -340,7 +323,7 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
             // TODO: レンタル在庫検証実装
             
         } catch (\Exception $e) {
-            log_error('レンタル在庫検証失敗', ['error' => $e->getMessage()]);
+            error_log('レンタル在庫検証失敗: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -354,10 +337,10 @@ class RentalPlugin extends AbstractPluginEventSubscriber implements EventSubscri
     {
         try {
             // TODO: レンタルコントローラー共通処理実装
-            log_debug('レンタルコントローラーセットアップ完了');
+            error_log('レンタルコントローラーセットアップ完了');
             
         } catch (\Exception $e) {
-            log_error('レンタルコントローラーセットアップ失敗', ['error' => $e->getMessage()]);
+            error_log('レンタルコントローラーセットアップ失敗: ' . $e->getMessage());
         }
     }
 }

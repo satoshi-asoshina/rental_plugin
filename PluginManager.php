@@ -20,7 +20,7 @@ use Eccube\Entity\PageLayout;
 use Eccube\Repository\LayoutRepository;
 use Eccube\Repository\PageLayoutRepository;
 use Eccube\Repository\PageRepository;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
