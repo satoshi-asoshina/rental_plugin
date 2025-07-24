@@ -2,6 +2,102 @@ name: レンタル管理
 code: Rental
 version: 1.0.0
 service_class: Plugin\Rental\PluginManager
-description: EC-CUBE用レンタル管理プラグインです。
+event_class: Plugin\Rental\RentalPlugin
+
+# プラグイン基本情報
+description: |
+  EC-CUBE用レンタル管理プラグインです。
+  以下の機能を提供します：
+  
+  ■ 主要機能
+  - 商品のレンタル注文管理
+  - レンタル期間設定（日額・週額・月額対応）
+  - リアルタイム在庫管理
+  - 返却・延滞管理
+  - 自動メール通知
+  - 売上分析・レポート機能
+  
+  ■ 管理機能
+  - レンタル設定管理
+  - 注文ステータス管理
+  - 在庫状況確認
+  - 延滞料金計算
+  - データエクスポート
+  
+  ■ フロント機能
+  - レンタル商品表示
+  - 期間選択カート機能
+  - マイページ連携
+  - 注文履歴確認
+
+# 対応バージョン
 supported_versions:
   - "4.3"
+
+# 必要な権限
+permissions:
+  - ROLE_ADMIN
+  - ROLE_USER
+
+# プラグイン設定
+config:
+  # デフォルト設定値
+  defaults:
+    auto_approval: false
+    max_rental_days: 30
+    min_rental_days: 1
+    reminder_days: 3
+    overdue_fee_rate: 0.1
+    deposit_required: false
+    
+  # 管理画面設定
+  admin:
+    menu_name: "レンタル管理"
+    menu_icon: "fa-calendar"
+    menu_order: 100
+    
+  # フロント設定
+  front:
+    cart_enabled: true
+    guest_rental: false
+    auto_calculation: true
+
+# データベース設定
+database:
+  # テーブルプレフィックス
+  table_prefix: "plg_rental_"
+  
+  # MySQL対応
+  mysql_compatible: true
+  
+  # インデックス設定
+  indexes:
+    - table: "plg_rental_order"
+      columns: ["customer_id", "status"]
+    - table: "plg_rental_order" 
+      columns: ["rental_start_date", "rental_end_date"]
+    - table: "plg_rental_product"
+      columns: ["product_id", "rental_enabled"]
+
+# API設定
+api:
+  enabled: true
+  rate_limit: 100
+  endpoints:
+    - "/api/rental/orders"
+    - "/api/rental/inventory" 
+    - "/api/rental/reports"
+
+# セキュリティ設定
+security:
+  csrf_protection: true
+  rate_limiting: true
+  audit_logging: true
+  input_validation: true
+
+# キャッシュ設定
+cache:
+  config_cache: true
+  inventory_cache: true
+  calculation_cache: true
+  ttl: 3600

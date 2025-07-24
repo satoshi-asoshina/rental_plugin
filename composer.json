@@ -1,11 +1,23 @@
 {
     "name": "ec-cube/rental-plugin",
     "version": "1.0.0",
-    "description": "EC-CUBE レンタル管理プラグイン",
+    "description": "EC-CUBE レンタル管理プラグイン - 商品のレンタル注文、在庫管理、返却管理機能を提供",
     "type": "eccube-plugin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "EC-CUBE Development Team",
+            "email": "info@ec-cube.co.jp"
+        }
+    ],
     "require": {
         "ec-cube/plugin-installer": "~0.0.7 || ~2.0",
         "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.0",
+        "phpstan/phpstan": "^1.0"
     },
     "extra": {
         "code": "Rental",
@@ -13,11 +25,25 @@
         "version": "1.0.0",
         "supported-versions": [
             "4.3"
-        ]
+        ],
+        "description": "商品のレンタル注文管理を行うプラグインです。レンタル期間設定、在庫管理、返却管理、延滞管理などの機能を提供します。"
     },
     "autoload": {
         "psr-4": {
             "Plugin\\Rental\\": ""
         }
-    }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Plugin\\Rental\\Tests\\": "Tests/"
+        }
+    },
+    "keywords": [
+        "ec-cube",
+        "plugin",
+        "rental",
+        "レンタル",
+        "在庫管理",
+        "注文管理"
+    ]
 }
