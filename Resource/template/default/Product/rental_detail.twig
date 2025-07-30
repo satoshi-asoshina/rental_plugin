@@ -1,0 +1,630 @@
+{#
+This file is part of EC-CUBE
+
+Copyright(c) EC-CUBE CO.,LTD. All Rights Reserved.
+
+http://www.ec-cube.co.jp/
+
+For the full copyright and license information, please view the LICENSE
+file that was distributed with this source code.
+#}
+
+{% extends '@Eccube/default_frame.twig' %}
+
+{% set body_class = 'product_page' %}
+
+{% block title %}{{ Product.name }}{% endblock %}
+
+{% block stylesheet %}
+<style>
+.rental-section {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    margin: 1rem 0;
+}
+.rental-form {
+    background: white;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+}
+.price-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+.availability-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+.availability-indicator.available {
+    background-color: #28a745;
+}
+.availability-indicator.unavailable {
+    background-color: #dc3545;
+}
+.calendar-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.date-picker-container {
+    position: relative;
+}
+.calculation-result {
+    background-color: #e7f1ff;
+    border: 1px solid #b3d7ff;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.option-group {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.rental-guidelines {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // 日付ピッカーの初期化
+    $('.datepicker').datepicker({
+        format: 'yyyy-mm-dd',
+        startDate: 'today',
+        autoclose: true,
+        language: 'ja'
+    });
+
+    // レンタル期間の自動計算
+    $('#rental_front_rental_start_date, #rental_front_rental_end_date').on('change', function() {
+        calculatePrice();
+        checkAvailability();
+    });
+
+    // 数量変更時の処理
+    $('#rental_front_quantity').on('change', function() {
+        calculatePrice();
+        checkAvailability();
+    });
+
+    // オプション変更時の処理
+    $('[data-price-calculation="true"]').on('change', function() {
+        calculatePrice();
+    });
+
+    // 料金計算
+    function calculatePrice() {
+        const formData = new FormData($('#rental-form')[0]);
+        
+        $.ajax({
+            url: '{{ url("rental_calculate_price") }}',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                updatePriceDisplay(response);
+            },
+            error: function(xhr) {
+                console.error('価格計算エラー:', xhr.responseJSON);
+            }
+        });
+    }
+
+    // 在庫確認
+    function checkAvailability() {
+        const productId = {{ Product.id }};
+        const startDate = $('#rental_front_rental_start_date').val();
+        const endDate = $('#rental_front_rental_end_date').val();
+        const quantity = $('#rental_front_quantity').val();
+
+        if (!startDate || !endDate) return;
+
+        $.ajax({
+            url: '{{ url("rental_check_availability") }}',
+            method: 'POST',
+            data: {
+                product_id: productId,
+                start_date: startDate,
+                end_date: endDate,
+                quantity: quantity
+            },
+            success: function(response) {
+                updateAvailabilityDisplay(response);
+            },
+            error: function(xhr) {
+                console.error('在庫確認エラー:', xhr.responseJSON);
+            }
+        });
+    }
+
+    // 価格表示の更新
+    function updatePriceDisplay(data) {
+        $('#base-price').text('¥' + data.base_price.toLocaleString());
+        $('#total-days').text(data.total_days + '日間');
+        $('#subtotal').text('¥' + data.subtotal.toLocaleString());
+        $('#deposit').text('¥' + data.deposit.toLocaleString());
+        $('#tax').text('¥' + data.tax.toLocaleString());
+        $('#total-price').text('¥' + data.total.toLocaleString());
+
+        // 詳細内訳の表示
+        if (data.breakdown) {
+            let breakdownHtml = '';
+            data.breakdown.forEach(function(item) {
+                breakdownHtml += `<tr>
+                    <td>${item.label}</td>
+                    <td class="text-right">¥${item.amount.toLocaleString()}</td>
+                </tr>`;
+            });
+            $('#price-breakdown tbody').html(breakdownHtml);
+        }
+
+        $('.calculation-result').show();
+    }
+
+    // 在庫状況表示の更新
+    function updateAvailabilityDisplay(data) {
+        const indicator = $('.availability-indicator');
+        const message = $('#availability-message');
+        
+        if (data.available) {
+            indicator.removeClass('unavailable').addClass('available');
+            message.text(`在庫あり（${data.available_quantity}個まで利用可能）`);
+            $('#add-to-cart-btn').prop('disabled', false);
+        } else {
+            indicator.removeClass('available').addClass('unavailable');
+            message.text(data.message || '在庫不足');
+            $('#add-to-cart-btn').prop('disabled', true);
+            
+            // 代替日程の提案
+            if (data.alternative_dates && data.alternative_dates.length > 0) {
+                showAlternativeDates(data.alternative_dates);
+            }
+        }
+    }
+
+    // 代替日程の表示
+    function showAlternativeDates(alternatives) {
+        let html = '<h6>利用可能な代替日程：</h6><ul>';
+        alternatives.forEach(function(alt) {
+            html += `<li>
+                <a href="#" class="alternative-date" 
+                   data-start="${alt.start_date}" 
+                   data-end="${alt.end_date}">
+                    ${alt.start_date} ～ ${alt.end_date}
+                </a>
+            </li>`;
+        });
+        html += '</ul>';
+        $('#alternative-dates').html(html);
+    }
+
+    // 代替日程の選択
+    $(document).on('click', '.alternative-date', function(e) {
+        e.preventDefault();
+        const startDate = $(this).data('start');
+        const endDate = $(this).data('end');
+        
+        $('#rental_front_rental_start_date').val(startDate);
+        $('#rental_front_rental_end_date').val(endDate);
+        
+        calculatePrice();
+        checkAvailability();
+    });
+
+    // カートに追加
+    $('#add-to-cart-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData($('#rental-form')[0]);
+        
+        $.ajax({
+            url: '{{ url("rental_cart_add") }}',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // 成功時の処理
+                    showSuccessMessage(response.message);
+                    updateCartCounter(response.cart_count);
+                    
+                    // カート画面への遷移を提案
+                    if (confirm('カートに追加しました。カート画面に移動しますか？')) {
+                        window.location.href = '{{ url("rental_cart") }}';
+                    }
+                } else {
+                    showErrorMessage(response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showErrorMessage(response.message || 'カートへの追加に失敗しました。');
+            }
+        });
+    });
+
+    // カレンダー表示
+    $('#show-calendar-btn').on('click', function() {
+        loadCalendar();
+    });
+
+    function loadCalendar() {
+        const productId = {{ Product.id }};
+        const currentDate = new Date();
+        
+        $.ajax({
+            url: '{{ url("rental_calendar", {id: Product.id}) }}',
+            method: 'GET',
+            data: {
+                year: currentDate.getFullYear(),
+                month: currentDate.getMonth() + 1
+            },
+            success: function(response) {
+                displayCalendar(response.calendar);
+                $('#calendar-modal').modal('show');
+            }
+        });
+    }
+
+    function displayCalendar(calendarData) {
+        // カレンダーの表示ロジック
+        let html = '<table class="table table-bordered">';
+        html += '<thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead><tbody>';
+        
+        // カレンダーの日付表示ロジックを実装
+        calendarData.weeks.forEach(function(week) {
+            html += '<tr>';
+            week.forEach(function(day) {
+                let classes = 'calendar-day';
+                if (day.available) {
+                    classes += ' available';
+                } else {
+                    classes += ' unavailable';
+                }
+                if (day.isToday) {
+                    classes += ' today';
+                }
+                
+                html += `<td class="${classes}" data-date="${day.date}">
+                    <div class="day-number">${day.day}</div>
+                    <div class="availability-info">${day.available_count || 0}</div>
+                </td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += '</tbody></table>';
+        $('#calendar-container').html(html);
+    }
+
+    // メッセージ表示関数
+    function showSuccessMessage(message) {
+        const alert = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        $('#message-container').html(alert);
+    }
+
+    function showErrorMessage(message) {
+        const alert = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        $('#message-container').html(alert);
+    }
+
+    function updateCartCounter(count) {
+        $('.cart-counter').text(count);
+    }
+
+    // 初期表示時の処理
+    if ($('#rental_front_rental_start_date').val() && $('#rental_front_rental_end_date').val()) {
+        calculatePrice();
+        checkAvailability();
+    }
+});
+</script>
+{% endblock %}
+
+{% block main %}
+<div class="ec-productRole">
+    <div class="ec-grid2">
+        <div class="ec-grid2__cell">
+            <!-- 商品画像 -->
+            <div class="ec-productRole__img">
+                {% if Product.ProductImage|length > 0 %}
+                    <div class="slick-slider">
+                        {% for ProductImage in Product.ProductImage %}
+                            <div class="item">
+                                <img src="{{ asset(ProductImage, 'save_image') }}" alt="{{ Product.name }}" />
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <img src="{{ asset('assets/img/common/no_image_product.png') }}" alt="{{ Product.name }}" />
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="ec-grid2__cell">
+            <!-- 商品情報 -->
+            <div class="ec-productRole__profile">
+                <!-- メッセージエリア -->
+                <div id="message-container"></div>
+                
+                <div class="ec-productRole__title">
+                    <h2>{{ Product.name }}</h2>
+                </div>
+                
+                {% if Product.description_detail %}
+                <div class="ec-productRole__description">
+                    {{ Product.description_detail|raw|nl2br }}
+                </div>
+                {% endif %}
+
+                <!-- レンタル情報 -->
+                <div class="rental-section">
+                    <h4><i class="fa fa-calendar"></i> レンタル情報</h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>日額料金:</strong> ¥{{ RentalProduct.dailyPrice|number_format }}
+                            {% if RentalProduct.weeklyPrice %}
+                                <br><strong>週額料金:</strong> ¥{{ RentalProduct.weeklyPrice|number_format }}
+                            {% endif %}
+                            {% if RentalProduct.monthlyPrice %}
+                                <br><strong>月額料金:</strong> ¥{{ RentalProduct.monthlyPrice|number_format }}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>レンタル期間:</strong> {{ RentalProduct.minRentalDays }}日〜{{ RentalProduct.maxRentalDays ? RentalProduct.maxRentalDays ~ '日' : '制限なし' }}
+                            <br><strong>在庫数:</strong> {{ RentalProduct.stockQuantity }}個
+                            {% if RentalProduct.depositAmount %}
+                                <br><strong>保証金:</strong> ¥{{ RentalProduct.depositAmount|number_format }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- レンタル予約フォーム -->
+                <div class="rental-form">
+                    {{ form_start(form, {'attr': {'id': 'rental-form'}}) }}
+                    
+                    <h5><i class="fa fa-calendar-plus"></i> レンタル予約</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form_label(form.rental_start_date) }}
+                                {{ form_widget(form.rental_start_date) }}
+                                {{ form_errors(form.rental_start_date) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form_label(form.rental_end_date) }}
+                                {{ form_widget(form.rental_end_date) }}
+                                {{ form_errors(form.rental_end_date) }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                {{ form_label(form.quantity) }}
+                                {{ form_widget(form.quantity) }}
+                                {{ form_errors(form.quantity) }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label>在庫状況</label>
+                                <div>
+                                    <span class="availability-indicator"></span>
+                                    <span id="availability-message">期間を選択してください</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- オプション選択 -->
+                    {% if form.size_option is defined %}
+                    <div class="option-group">
+                        <h6>サイズ選択</h6>
+                        {{ form_widget(form.size_option) }}
+                        {{ form_errors(form.size_option) }}
+                    </div>
+                    {% endif %}
+
+                    {% if form.color_option is defined %}
+                    <div class="option-group">
+                        <h6>カラー選択</h6>
+                        {{ form_widget(form.color_option) }}
+                        {{ form_errors(form.color_option) }}
+                    </div>
+                    {% endif %}
+
+                    {% if form.insurance_option is defined %}
+                    <div class="option-group">
+                        <h6>保険オプション</h6>
+                        {{ form_widget(form.insurance_option) }}
+                        {{ form_errors(form.insurance_option) }}
+                    </div>
+                    {% endif %}
+
+                    <!-- 配送情報 -->
+                    <div class="option-group">
+                        <h6>配送情報</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form_label(form.delivery_date) }}
+                                {{ form_widget(form.delivery_date) }}
+                                {{ form_errors(form.delivery_date) }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form_label(form.delivery_time) }}
+                                {{ form_widget(form.delivery_time) }}
+                                {{ form_errors(form.delivery_time) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 返却方法 -->
+                    <div class="option-group">
+                        <h6>返却方法</h6>
+                        {{ form_widget(form.return_method) }}
+                        {{ form_errors(form.return_method) }}
+                    </div>
+
+                    <!-- 特記事項 -->
+                    <div class="mb-3">
+                        {{ form_label(form.notes) }}
+                        {{ form_widget(form.notes) }}
+                        {{ form_errors(form.notes) }}
+                    </div>
+
+                    <!-- 利用規約同意 -->
+                    <div class="mb-3">
+                        {{ form_widget(form.agree_terms) }}
+                        {{ form_errors(form.agree_terms) }}
+                    </div>
+
+                    <!-- 料金計算結果 -->
+                    <div class="calculation-result" style="display: none;">
+                        <h6><i class="fa fa-calculator"></i> 料金詳細</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td>基本料金:</td>
+                                <td class="text-right"><span id="base-price">¥0</span></td>
+                            </tr>
+                            <tr>
+                                <td>レンタル期間:</td>
+                                <td class="text-right"><span id="total-days">0日間</span></td>
+                            </tr>
+                            <tr>
+                                <td>小計:</td>
+                                <td class="text-right"><span id="subtotal">¥0</span></td>
+                            </tr>
+                            {% if rental_config.deposit_required %}
+                            <tr>
+                                <td>保証金:</td>
+                                <td class="text-right"><span id="deposit">¥0</span></td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td>消費税:</td>
+                                <td class="text-right"><span id="tax">¥0</span></td>
+                            </tr>
+                            <tr class="table-active">
+                                <th>合計:</th>
+                                <th class="text-right price-display"><span id="total-price">¥0</span></th>
+                            </tr>
+                        </table>
+                        
+                        <!-- 詳細内訳 -->
+                        <table id="price-breakdown" class="table table-sm" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>項目</th>
+                                    <th class="text-right">金額</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- 代替日程提案 -->
+                    <div id="alternative-dates" class="mt-3"></div>
+
+                    <!-- アクションボタン -->
+                    <div class="ec-productRole__btn">
+                        <button type="button" id="add-to-cart-btn" class="btn btn-primary btn-lg btn-block" disabled>
+                            <i class="fa fa-cart-plus"></i> カートに追加
+                        </button>
+                        <button type="button" id="show-calendar-btn" class="btn btn-outline-secondary btn-lg btn-block mt-2">
+                            <i class="fa fa-calendar"></i> カレンダーで確認
+                        </button>
+                    </div>
+
+                    {{ form_end(form) }}
+                </div>
+
+                <!-- レンタルガイドライン -->
+                <div class="rental-guidelines">
+                    <h6><i class="fa fa-info-circle"></i> レンタルご利用について</h6>
+                    <ul class="mb-0">
+                        <li>レンタル開始日の前日までに商品をお届けします</li>
+                        <li>返却期限を過ぎた場合、延滞料金が発生します</li>
+                        <li>商品の破損・紛失の場合は別途料金が発生する場合があります</li>
+                        <li>詳細は<a href="#">利用規約</a>をご確認ください</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 関連商品 -->
+    {% if related_products|length > 0 %}
+    <div class="ec-productRole__detail">
+        <div class="ec-productRole__detailInner">
+            <h3>関連するレンタル商品</h3>
+            <div class="row">
+                {% for related in related_products %}
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        {% if related.Product.ProductImage|length > 0 %}
+                            <img src="{{ asset(related.Product.ProductImage[0], 'save_image') }}" class="card-img-top" alt="{{ related.Product.name }}">
+                        {% endif %}
+                        <div class="card-body">
+                            <h6 class="card-title">{{ related.Product.name }}</h6>
+                            <p class="card-text">
+                                日額: ¥{{ related.dailyPrice|number_format }}
+                            </p>
+                            <a href="{{ url('rental_product_detail', {id: related.Product.id}) }}" class="btn btn-sm btn-outline-primary">
+                                詳細を見る
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- カレンダーモーダル -->
+<div class="modal fade" id="calendar-modal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">在庫カレンダー</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="calendar-container" class="calendar-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

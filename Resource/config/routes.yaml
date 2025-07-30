@@ -1,0 +1,285 @@
+# レンタル管理プラグイン ルーティング設定
+
+# 管理画面ルート
+admin_rental:
+  resource: admin_routes.yaml
+  prefix: /%eccube_admin_route%/rental
+
+# フロント画面ルート
+rental_front:
+  resource: front_routes.yaml
+  prefix: /rental
+
+# API ルート
+rental_api:
+  resource: api_routes.yaml
+  prefix: /api/rental
+  requirements:
+    _format: json
+
+---
+# admin_routes.yaml (管理画面用)
+
+# レンタル設定管理
+admin_rental_config:
+  path: /config
+  controller: Plugin\Rental\Controller\Admin\RentalConfigController::index
+  methods: [GET, POST]
+
+admin_rental_config_reset:
+  path: /config/reset
+  controller: Plugin\Rental\Controller\Admin\RentalConfigController::reset
+  methods: [POST]
+
+admin_rental_config_export:
+  path: /config/export
+  controller: Plugin\Rental\Controller\Admin\RentalConfigController::export
+  methods: [GET]
+
+admin_rental_config_import:
+  path: /config/import
+  controller: Plugin\Rental\Controller\Admin\RentalConfigController::import
+  methods: [POST]
+
+admin_rental_config_validate:
+  path: /config/validate
+  controller: Plugin\Rental\Controller\Admin\RentalConfigController::validate
+  methods: [POST]
+
+# レンタル注文管理
+admin_rental_order:
+  path: /order
+  controller: Plugin\Rental\Controller\Admin\RentalController::index
+  methods: [GET]
+
+admin_rental_order_search:
+  path: /order/search
+  controller: Plugin\Rental\Controller\Admin\RentalController::search
+  methods: [GET, POST]
+
+admin_rental_order_detail:
+  path: /order/{id}
+  controller: Plugin\Rental\Controller\Admin\RentalController::detail
+  methods: [GET]
+  requirements:
+    id: \d+
+
+admin_rental_order_edit:
+  path: /order/{id}/edit
+  controller: Plugin\Rental\Controller\Admin\RentalController::edit
+  methods: [GET, POST]
+  requirements:
+    id: \d+
+
+admin_rental_order_delete:
+  path: /order/{id}/delete
+  controller: Plugin\Rental\Controller\Admin\RentalController::delete
+  methods: [POST]
+  requirements:
+    id: \d+
+
+admin_rental_order_status_update:
+  path: /order/{id}/status
+  controller: Plugin\Rental\Controller\Admin\RentalController::updateStatus
+  methods: [POST]
+  requirements:
+    id: \d+
+
+admin_rental_order_extension:
+  path: /order/{id}/extension
+  controller: Plugin\Rental\Controller\Admin\RentalController::extension
+  methods: [GET, POST]
+  requirements:
+    id: \d+
+
+admin_rental_order_return:
+  path: /order/{id}/return
+  controller: Plugin\Rental\Controller\Admin\RentalController::returnProcess
+  methods: [GET, POST]
+  requirements:
+    id: \d+
+
+# レンタルレポート管理
+admin_rental_report:
+  path: /report
+  controller: Plugin\Rental\Controller\Admin\RentalReportController::index
+  methods: [GET]
+
+admin_rental_report_sales:
+  path: /report/sales
+  controller: Plugin\Rental\Controller\Admin\RentalReportController::sales
+  methods: [GET, POST]
+
+admin_rental_report_analytics:
+  path: /report/analytics
+  controller: Plugin\Rental\Controller\Admin\RentalReportController::analytics
+  methods: [GET, POST]
+
+admin_rental_report_export:
+  path: /report/export
+  controller: Plugin\Rental\Controller\Admin\RentalReportController::export
+  methods: [POST]
+
+# レンタル分析機能
+admin_rental_analytics:
+  path: /analytics
+  controller: Plugin\Rental\Controller\Admin\RentalAnalyticsController::index
+  methods: [GET]
+
+admin_rental_analytics_dashboard:
+  path: /analytics/dashboard
+  controller: Plugin\Rental\Controller\Admin\RentalAnalyticsController::dashboard
+  methods: [GET]
+
+---
+# front_routes.yaml (フロント画面用)
+
+# レンタル商品詳細
+rental_product_detail:
+  path: /product/{id}
+  controller: Plugin\Rental\Controller\Front\RentalProductController::detail
+  methods: [GET]
+  requirements:
+    id: \d+
+
+# レンタルカート機能
+rental_cart:
+  path: /cart
+  controller: Plugin\Rental\Controller\Front\RentalCartController::index
+  methods: [GET]
+
+rental_cart_add:
+  path: /cart/add
+  controller: Plugin\Rental\Controller\Front\RentalCartController::add
+  methods: [POST]
+
+rental_cart_update:
+  path: /cart/update
+  controller: Plugin\Rental\Controller\Front\RentalCartController::update
+  methods: [POST]
+
+rental_cart_remove:
+  path: /cart/remove/{id}
+  controller: Plugin\Rental\Controller\Front\RentalCartController::remove
+  methods: [POST]
+  requirements:
+    id: \d+
+
+rental_cart_clear:
+  path: /cart/clear
+  controller: Plugin\Rental\Controller\Front\RentalCartController::clear
+  methods: [POST]
+
+# レンタル注文フロー
+rental_input:
+  path: /input
+  controller: Plugin\Rental\Controller\Front\RentalPaymentController::input
+  methods: [GET, POST]
+
+rental_confirm:
+  path: /confirm
+  controller: Plugin\Rental\Controller\Front\RentalPaymentController::confirm
+  methods: [GET, POST]
+
+rental_payment:
+  path: /payment
+  controller: Plugin\Rental\Controller\Front\RentalPaymentController::payment
+  methods: [GET, POST]
+
+rental_complete:
+  path: /complete
+  controller: Plugin\Rental\Controller\Front\RentalPaymentController::complete
+  methods: [GET]
+
+# レンタルマイページ機能
+rental_mypage:
+  path: /mypage
+  controller: Plugin\Rental\Controller\Front\RentalMyPageController::index
+  methods: [GET]
+
+rental_mypage_history:
+  path: /mypage/history
+  controller: Plugin\Rental\Controller\Front\RentalMyPageController::history
+  methods: [GET]
+
+rental_mypage_detail:
+  path: /mypage/detail/{id}
+  controller: Plugin\Rental\Controller\Front\RentalMyPageController::detail
+  methods: [GET]
+  requirements:
+    id: \d+
+
+rental_mypage_extension:
+  path: /mypage/extension/{id}
+  controller: Plugin\Rental\Controller\Front\RentalMyPageController::extension
+  methods: [GET, POST]
+  requirements:
+    id: \d+
+
+rental_mypage_cancel:
+  path: /mypage/cancel/{id}
+  controller: Plugin\Rental\Controller\Front\RentalMyPageController::cancel
+  methods: [POST]
+  requirements:
+    id: \d+
+
+---
+# api_routes.yaml (API用)
+
+# レンタル注文API
+api_rental_order_list:
+  path: /orders
+  controller: Plugin\Rental\Controller\Api\RentalOrderController::list
+  methods: [GET]
+
+api_rental_order_create:
+  path: /orders
+  controller: Plugin\Rental\Controller\Api\RentalOrderController::create
+  methods: [POST]
+
+api_rental_order_detail:
+  path: /orders/{id}
+  controller: Plugin\Rental\Controller\Api\RentalOrderController::detail
+  methods: [GET]
+  requirements:
+    id: \d+
+
+api_rental_order_update:
+  path: /orders/{id}
+  controller: Plugin\Rental\Controller\Api\RentalOrderController::update
+  methods: [PUT]
+  requirements:
+    id: \d+
+
+api_rental_order_delete:
+  path: /orders/{id}
+  controller: Plugin\Rental\Controller\Api\RentalOrderController::delete
+  methods: [DELETE]
+  requirements:
+    id: \d+
+
+# レンタル在庫API
+api_rental_inventory_check:
+  path: /inventory/check
+  controller: Plugin\Rental\Controller\Api\RentalInventoryController::check
+  methods: [POST]
+
+api_rental_inventory_availability:
+  path: /inventory/availability/{productId}
+  controller: Plugin\Rental\Controller\Api\RentalInventoryController::availability
+  methods: [GET]
+  requirements:
+    productId: \d+
+
+# レンタル決済API
+api_rental_payment_process:
+  path: /payment/process
+  controller: Plugin\Rental\Controller\Api\RentalPaymentController::process
+  methods: [POST]
+
+api_rental_payment_verify:
+  path: /payment/verify/{orderId}
+  controller: Plugin\Rental\Controller\Api\RentalPaymentController::verify
+  methods: [GET]
+  requirements:
+    orderId: \d+

@@ -1,0 +1,321 @@
+# レンタル管理プラグイン サービス設定
+
+services:
+  # デフォルト設定
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  # プラグインの基盤クラス
+  Plugin\Rental\:
+    resource: '../../'
+    exclude: 
+      - '../../Tests/'
+      - '../../Resource/'
+      - '../../Entity/'
+
+  # リポジトリ設定
+  Plugin\Rental\Repository\RentalConfigRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+    calls:
+      - [setRegistry, ['@Doctrine\Persistence\ManagerRegistry']]
+
+  Plugin\Rental\Repository\RentalOrderRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+    calls:
+      - [setRegistry, ['@Doctrine\Persistence\ManagerRegistry']]
+
+  Plugin\Rental\Repository\RentalProductRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+
+  Plugin\Rental\Repository\RentalCartRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+
+  Plugin\Rental\Repository\RentalInventoryRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+
+  Plugin\Rental\Repository\RentalPaymentRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+
+  Plugin\Rental\Repository\RentalLogRepository:
+    arguments:
+      - '@doctrine.orm.entity_manager'
+      - '@Doctrine\Persistence\ManagerRegistry'
+
+  # コントローラー設定
+  Plugin\Rental\Controller\Admin\RentalConfigController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Admin\RentalController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+      - '@Plugin\Rental\Service\RentalService'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Admin\RentalReportController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Service\RentalAnalyticsService'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Admin\RentalAnalyticsController:
+    arguments:
+      - '@Plugin\Rental\Service\RentalAnalyticsService'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Front\RentalProductController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+      - '@Plugin\Rental\Service\RentalService'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Front\RentalCartController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalCartRepository'
+      - '@Plugin\Rental\Service\RentalService'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Front\RentalPaymentController:
+    arguments:
+      - '@Plugin\Rental\Service\RentalService'
+      - '@Plugin\Rental\Service\RentalPaymentService'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Front\RentalMyPageController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Service\RentalService'
+    tags: ['controller.service_arguments']
+
+  # API コントローラー設定
+  Plugin\Rental\Controller\Api\RentalOrderController:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Service\RentalService'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Api\RentalInventoryController:
+    arguments:
+      - '@Plugin\Rental\Service\RentalInventoryService'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags: ['controller.service_arguments']
+
+  Plugin\Rental\Controller\Api\RentalPaymentController:
+    arguments:
+      - '@Plugin\Rental\Service\RentalPaymentService'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+    tags: ['controller.service_arguments']
+
+  # サービス層設定
+  Plugin\Rental\Service\RentalService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+      - '@Plugin\Rental\Service\RentalCalculationService'
+      - '@Plugin\Rental\Service\RentalValidationService'
+      - '@Plugin\Rental\Service\RentalNotificationService'
+      - '@Plugin\Rental\Service\RentalLogService'
+
+  Plugin\Rental\Service\RentalCalculationService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+
+  Plugin\Rental\Service\RentalSecurityService:
+    arguments:
+      - '@security.authorization_checker'
+      - '@security.token_storage'
+      - '@Plugin\Rental\Service\RentalLogService'
+
+  Plugin\Rental\Service\RentalValidationService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+      - '@validator'
+
+  Plugin\Rental\Service\RentalAuditService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalLogRepository'
+      - '@security.token_storage'
+
+  Plugin\Rental\Service\RentalNotificationService:
+    arguments:
+      - '@mailer'
+      - '@twig'
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+      - '@Plugin\Rental\Service\RentalLogService'
+
+  Plugin\Rental\Service\RentalLogService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalLogRepository'
+      - '@security.token_storage'
+
+  Plugin\Rental\Service\RentalAnalyticsService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+      - '@Plugin\Rental\Service\RentalCacheService'
+
+  Plugin\Rental\Service\RentalInventoryService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalInventoryRepository'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+
+  Plugin\Rental\Service\RentalPaymentService:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalPaymentRepository'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+      - '@Plugin\Rental\Service\RentalCalculationService'
+      - '@Plugin\Rental\Service\RentalLogService'
+
+  Plugin\Rental\Service\RentalCacheService:
+    arguments:
+      - '@cache.app'
+
+  # イベントリスナー設定
+  Plugin\Rental\EventListener\MyPageListener:
+    arguments:
+      - '@twig'
+      - '@Plugin\Rental\Repository\RentalOrderRepository'
+    tags:
+      - { name: kernel.event_listener, event: knp_paginator.before, method: onKernelRequest }
+
+  Plugin\Rental\EventListener\ProductDetailListener:
+    arguments:
+      - '@twig'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags:
+      - { name: kernel.event_listener, event: kernel.view, method: onKernelView }
+
+  Plugin\Rental\EventListener\RentalOrderListener:
+    arguments:
+      - '@Plugin\Rental\Service\RentalNotificationService'
+      - '@Plugin\Rental\Service\RentalLogService'
+    tags:
+      - { name: doctrine.event_listener, event: postPersist }
+      - { name: doctrine.event_listener, event: postUpdate }
+
+  Plugin\Rental\EventListener\RentalPaymentListener:
+    arguments:
+      - '@Plugin\Rental\Service\RentalPaymentService'
+      - '@Plugin\Rental\Service\RentalLogService'
+    tags:
+      - { name: kernel.event_listener, event: plugin.rental.payment.success, method: onPaymentSuccess }
+      - { name: kernel.event_listener, event: plugin.rental.payment.failed, method: onPaymentFailed }
+
+  Plugin\Rental\EventListener\RentalSecurityListener:
+    arguments:
+      - '@Plugin\Rental\Service\RentalSecurityService'
+    tags:
+      - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest }
+
+  # イベントサブスクライバー設定
+  Plugin\Rental\EventSubscriber\AdminProductSubscriber:
+    arguments:
+      - '@twig'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags:
+      - { name: kernel.event_subscriber }
+
+  Plugin\Rental\EventSubscriber\RentalNotificationSubscriber:
+    arguments:
+      - '@Plugin\Rental\Service\RentalNotificationService'
+    tags:
+      - { name: kernel.event_subscriber }
+
+  Plugin\Rental\EventSubscriber\RentalAuditSubscriber:
+    arguments:
+      - '@Plugin\Rental\Service\RentalAuditService'
+    tags:
+      - { name: kernel.event_subscriber }
+
+  # フォーム設定
+  Plugin\Rental\Form\Type\RentalConfigType:
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\RentalFrontType:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\RentalOrderType:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\RentalPaymentType:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\RentalProductType:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\RentalCartType:
+    arguments:
+      - '@Plugin\Rental\Service\RentalCalculationService'
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\Admin\RentalSearchType:
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\Admin\RentalReportType:
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Type\Admin\RentalAnalyticsType:
+    tags: ['form.type']
+
+  Plugin\Rental\Form\Extension\Admin\ProductTypeExtension:
+    arguments:
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags:
+      - { name: form.type_extension, extended_type: Eccube\Form\Type\Admin\ProductType }
+
+  # Twig 拡張設定
+  Plugin\Rental\Twig\Extension\RentalExtension:
+    arguments:
+      - '@Plugin\Rental\Service\RentalService'
+      - '@Plugin\Rental\Service\RentalCalculationService'
+      - '@Plugin\Rental\Repository\RentalConfigRepository'
+    tags: ['twig.extension']
+
+  # テンプレートフック設定
+  Plugin\Rental\TemplateHook\Admin\ProductEditHook:
+    arguments:
+      - '@twig'
+      - '@Plugin\Rental\Repository\RentalProductRepository'
+    tags:
+      - { name: kernel.event_listener, event: admin.product.edit.complete, method: onAdminProductEditComplete }
+
+  # コマンド設定（将来的なバッチ処理用）
+  # Plugin\Rental\Command\RentalCleanupCommand:
+  #   arguments:
+  #     - '@Plugin\Rental\Service\RentalService'
+  #   tags: ['console.command']
+
+  # キャッシュタグ設定
+  cache.app.rental:
+    parent: cache.app
+    tags: ['cache.pool']

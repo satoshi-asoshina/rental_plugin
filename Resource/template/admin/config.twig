@@ -1,0 +1,450 @@
+{#
+This file is part of EC-CUBE
+
+Copyright(c) EC-CUBE CO.,LTD. All Rights Reserved.
+
+http://www.ec-cube.co.jp/
+
+For the full copyright and license information, please view the LICENSE
+file that was distributed with this source code.
+#}
+
+{% extends '@admin/default_frame.twig' %}
+
+{% set menus = ['rental', 'rental_config'] %}
+
+{% block title %}レンタル設定{% endblock %}
+{% block sub_title %}レンタル管理{% endblock %}
+
+{% block stylesheet %}
+<style>
+.config-section {
+    margin-bottom: 2rem;
+}
+.config-section .card-header {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+.statistics-card {
+    border-left: 4px solid #007bff;
+}
+.backup-actions {
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.form-help {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // 設定値の変更を監視
+    $('.config-form input, .config-form select').on('change', function() {
+        const form = $(this).closest('form');
+        form.addClass('changed');
+        $('.save-button').prop('disabled', false);
+    });
+
+    // バックアップファイルアップロード
+    $('#backup_file').on('change', function() {
+        const file = this.files[0];
+        if (file) {
+            $('.restore-button').prop('disabled', false);
+        }
+    });
+
+    // 設定リセット確認
+    $('.reset-button').on('click', function(e) {
+        if (!confirm('設定をデフォルト値にリセットしますか？\nこの操作は元に戻せません。')) {
+            e.preventDefault();
+        }
+    });
+
+    // 自動保存機能
+    let saveTimeout;
+    $('.config-form input, .config-form select').on('input change', function() {
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(function() {
+            $('.auto-save-indicator').show().text('自動保存中...');
+            // ここで自動保存のAjax処理を実装
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}
+
+{% block main %}
+<div class="c-contentsArea__cols">
+    <div class="c-contentsArea__primaryCol">
+        
+        <!-- 統計情報 -->
+        {% if statistics %}
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card statistics-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">総設定数</h5>
+                        <h3 class="text-primary">{{ statistics.total_configs }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card statistics-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">カスタム設定</h5>
+                        <h3 class="text-info">{{ statistics.custom_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card statistics-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">最終更新</h5>
+                        <small class="text-muted">
+                            {{ statistics.last_updated ? statistics.last_updated|date('Y/m/d H:i') : '未更新' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card statistics-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">バックアップ</h5>
+                        <small class="text-muted">
+                            {{ backup_info.last_backup ? backup_info.last_backup|date('Y/m/d H:i') : 'なし' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 設定フォーム -->
+        {{ form_start(form, {'attr': {'class': 'config-form'}}) }}
+        
+        <!-- 基本設定 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-cog"></i> 基本設定
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.auto_approval) }}
+                            {{ form_widget(form.auto_approval) }}
+                            <div class="form-help">
+                                有効にすると、レンタル注文が自動的に承認されます。
+                            </div>
+                            {{ form_errors(form.auto_approval) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.rental_start_buffer_days) }}
+                            {{ form_widget(form.rental_start_buffer_days) }}
+                            <div class="form-help">
+                                レンタル開始日の何日前から予約を受け付けるか
+                            </div>
+                            {{ form_errors(form.rental_start_buffer_days) }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.min_rental_days) }}
+                            {{ form_widget(form.min_rental_days) }}
+                            {{ form_errors(form.min_rental_days) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.max_rental_days) }}
+                            {{ form_widget(form.max_rental_days) }}
+                            {{ form_errors(form.max_rental_days) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.default_rental_days) }}
+                            {{ form_widget(form.default_rental_days) }}
+                            {{ form_errors(form.default_rental_days) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 料金設定 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-yen"></i> 料金設定
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.deposit_required) }}
+                            {{ form_widget(form.deposit_required) }}
+                            <div class="form-help">
+                                レンタル時に保証金の徴収を必須とするか
+                            </div>
+                            {{ form_errors(form.deposit_required) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.deposit_rate) }}
+                            {{ form_widget(form.deposit_rate) }}
+                            <div class="form-help">
+                                レンタル料金に対する保証金の割合（0.0-1.0）
+                            </div>
+                            {{ form_errors(form.deposit_rate) }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.overdue_fee_rate) }}
+                            {{ form_widget(form.overdue_fee_rate) }}
+                            <div class="form-help">
+                                延滞時の追加料金率（日割り）
+                            </div>
+                            {{ form_errors(form.overdue_fee_rate) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.cancellation_fee_rate) }}
+                            {{ form_widget(form.cancellation_fee_rate) }}
+                            <div class="form-help">
+                                キャンセル時の手数料率
+                            </div>
+                            {{ form_errors(form.cancellation_fee_rate) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知設定 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-bell"></i> 通知設定
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.reminder_days) }}
+                            {{ form_widget(form.reminder_days) }}
+                            <div class="form-help">
+                                返却期限の何日前にリマインダーを送信するか
+                            </div>
+                            {{ form_errors(form.reminder_days) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.admin_notification_email) }}
+                            {{ form_widget(form.admin_notification_email) }}
+                            <div class="form-help">
+                                管理者への通知メールアドレス
+                            </div>
+                            {{ form_errors(form.admin_notification_email) }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.reminder_notification_enabled) }}
+                            {{ form_widget(form.reminder_notification_enabled) }}
+                            {{ form_errors(form.reminder_notification_enabled) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.overdue_notification_enabled) }}
+                            {{ form_widget(form.overdue_notification_enabled) }}
+                            {{ form_errors(form.overdue_notification_enabled) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.confirmation_notification_enabled) }}
+                            {{ form_widget(form.confirmation_notification_enabled) }}
+                            {{ form_errors(form.confirmation_notification_enabled) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 在庫・商品設定 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-cube"></i> 在庫・商品設定
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.inventory_management_enabled) }}
+                            {{ form_widget(form.inventory_management_enabled) }}
+                            <div class="form-help">
+                                在庫数の管理を有効にするか
+                            </div>
+                            {{ form_errors(form.inventory_management_enabled) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.allow_backorder) }}
+                            {{ form_widget(form.allow_backorder) }}
+                            <div class="form-help">
+                                在庫切れでも注文を受け付けるか
+                            </div>
+                            {{ form_errors(form.allow_backorder) }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.maintenance_buffer_days) }}
+                            {{ form_widget(form.maintenance_buffer_days) }}
+                            <div class="form-help">
+                                メンテナンスのためのバッファ日数
+                            </div>
+                            {{ form_errors(form.maintenance_buffer_days) }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form_label(form.quality_check_required) }}
+                            {{ form_widget(form.quality_check_required) }}
+                            <div class="form-help">
+                                返却時の品質チェックを必須とするか
+                            </div>
+                            {{ form_errors(form.quality_check_required) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- システム設定 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-cogs"></i> システム設定
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.timezone) }}
+                            {{ form_widget(form.timezone) }}
+                            {{ form_errors(form.timezone) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.date_format) }}
+                            {{ form_widget(form.date_format) }}
+                            {{ form_errors(form.date_format) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form_label(form.session_timeout) }}
+                            {{ form_widget(form.session_timeout) }}
+                            <div class="form-help">
+                                セッションタイムアウト時間（秒）
+                            </div>
+                            {{ form_errors(form.session_timeout) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ボタンエリア -->
+        <div class="c-conversionArea">
+            <div class="c-conversionArea__container">
+                <div class="row justify-content-between">
+                    <div class="col-6">
+                        <div class="c-conversionArea__leftBlockItem">
+                            <button type="submit" class="btn btn-ec-conversion px-5 save-button">
+                                設定を保存
+                            </button>
+                            <span class="auto-save-indicator" style="display: none;">
+                                <i class="fa fa-spinner fa-spin"></i> 自動保存中...
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-6 text-right">
+                        <a href="{{ url('admin_rental_config_reset') }}" 
+                           class="btn btn-ec-sub reset-button"
+                           onclick="return confirm('設定をデフォルトにリセットしますか？')">
+                            デフォルトに戻す
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{ form_end(form) }}
+
+        <!-- バックアップ・復元 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <i class="fa fa-database"></i> バックアップ・復元
+            </div>
+            <div class="card-body">
+                <div class="backup-actions">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>設定のバックアップ</h6>
+                            <p class="text-muted">現在の設定をJSONファイルとしてダウンロードできます。</p>
+                            <form method="post" action="{{ url('admin_rental_config_backup') }}">
+                                {{ csrf_token() }}
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fa fa-download"></i> バックアップ作成
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>設定の復元</h6>
+                            <p class="text-muted">バックアップファイルから設定を復元できます。</p>
+                            <form method="post" action="{{ url('admin_rental_config_restore') }}" enctype="multipart/form-data">
+                                {{ csrf_token() }}
+                                <div class="input-group mb-2">
+                                    <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".json">
+                                    <button type="submit" class="btn btn-outline-secondary restore-button" disabled>
+                                        <i class="fa fa-upload"></i> 復元
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

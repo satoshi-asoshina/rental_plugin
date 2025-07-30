@@ -1,0 +1,10 @@
+name: レンタル管理
+code: Rental
+version: 1.0.0
+service_class: Plugin\Rental\PluginManager
+
+description: |
+  EC-CUBE用レンタル管理プラグイン
+
+supported_versions:
+  - "4.3"

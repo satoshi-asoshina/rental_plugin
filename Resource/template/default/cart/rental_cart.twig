@@ -1,0 +1,552 @@
+{#
+This file is part of EC-CUBE
+
+Copyright(c) EC-CUBE CO.,LTD. All Rights Reserved.
+
+http://www.ec-cube.co.jp/
+
+For the full copyright and license information, please view the LICENSE
+file that was distributed with this source code.
+#}
+
+{% extends '@Eccube/default_frame.twig' %}
+
+{% set body_class = 'cart_page' %}
+
+{% block title %}レンタルカート{% endblock %}
+
+{% block stylesheet %}
+<style>
+.cart-item {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: white;
+}
+.cart-item.conflict {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+.conflict-message {
+    background-color: #dc3545;
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    margin-bottom: 1rem;
+}
+.cart-summary {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    position: sticky;
+    top: 20px;
+}
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.quantity-control input {
+    width: 80px;
+    text-align: center;
+}
+.date-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.price-display {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #007bff;
+}
+.total-price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #28a745;
+}
+.empty-cart {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // 数量変更処理
+    $('.quantity-input').on('change', function() {
+        const itemId = $(this).data('item-id');
+        const quantity = $(this).val();
+        updateCartItem(itemId, { quantity: quantity });
+    });
+
+    // 日付変更処理
+    $('.date-input').on('change', function() {
+        const itemId = $(this).data('item-id');
+        const startDate = $(`.start-date[data-item-id="${itemId}"]`).val();
+        const endDate = $(`.end-date[data-item-id="${itemId}"]`).val();
+        
+        if (startDate && endDate) {
+            updateCartItem(itemId, { 
+                start_date: startDate, 
+                end_date: endDate 
+            });
+        }
+    });
+
+    // カートアイテム更新
+    function updateCartItem(itemId, data) {
+        showLoading();
+        
+        $.ajax({
+            url: `{{ url('rental_cart_update', {id: '__ID__'}) }}`.replace('__ID__', itemId),
+            method: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.success) {
+                    // 成功時は画面リロード
+                    location.reload();
+                } else {
+                    showErrorMessage(response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showErrorMessage(response.message || 'カートの更新に失敗しました。');
+            },
+            complete: function() {
+                hideLoading();
+            }
+        });
+    }
+
+    // アイテム削除
+    $('.remove-item-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (!confirm('この商品をカートから削除しますか？')) {
+            return;
+        }
+        
+        const itemId = $(this).data('item-id');
+        
+        showLoading();
+        
+        $.ajax({
+            url: `{{ url('rental_cart_remove', {id: '__ID__'}) }}`.replace('__ID__', itemId),
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    showErrorMessage(response.message);
+                }
+            },
+            error: function(xhr) {
+                showErrorMessage('削除に失敗しました。');
+            },
+            complete: function() {
+                hideLoading();
+            }
+        });
+    });
+
+    // カート全削除
+    $('.clear-cart-btn').on('click', function(e) {
+        e.preventDefault();
+        
+        if (!confirm('カート内の商品をすべて削除しますか？')) {
+            return;
+        }
+        
+        showLoading();
+        
+        $.ajax({
+            url: '{{ url("rental_cart_clear") }}',
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    showErrorMessage(response.message);
+                }
+            },
+            error: function(xhr) {
+                showErrorMessage('削除に失敗しました。');
+            },
+            complete: function() {
+                hideLoading();
+            }
+        });
+    });
+
+    // 競合解決処理
+    $('.resolve-conflict-btn').on('click', function() {
+        const itemId = $(this).data('item-id');
+        const resolution = $(this).data('resolution');
+        
+        let confirmMessage = '';
+        switch (resolution) {
+            case 'remove':
+                confirmMessage = 'この商品をカートから削除しますか？';
+                break;
+            case 'reduce_quantity':
+                confirmMessage = '数量を利用可能な数に減らしますか？';
+                break;
+            default:
+                return;
+        }
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        showLoading();
+        
+        $.ajax({
+            url: '{{ url("rental_cart_resolve_conflict") }}',
+            method: 'POST',
+            data: {
+                item_id: itemId,
+                resolution: resolution
+            },
+            success: function(response) {
+                if (response.success) {
+                    showSuccessMessage(response.message);
+                    
+                    if (response.action === 'removed') {
+                        location.reload();
+                    } else if (response.action === 'quantity_reduced') {
+                        location.reload();
+                    } else if (response.action === 'suggestions_provided') {
+                        displaySuggestions(itemId, response.suggestions);
+                    }
+                } else {
+                    showErrorMessage(response.message);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showErrorMessage(response.message || '処理に失敗しました。');
+            },
+            complete: function() {
+                hideLoading();
+            }
+        });
+    });
+
+    // 日程提案の表示
+    function displaySuggestions(itemId, suggestions) {
+        let html = '<div class="suggestions-container mt-3">';
+        html += '<h6>利用可能な代替日程：</h6>';
+        html += '<div class="list-group">';
+        
+        suggestions.forEach(function(suggestion) {
+            html += `<button type="button" class="list-group-item list-group-item-action suggestion-item"
+                        data-item-id="${itemId}"
+                        data-start="${suggestion.start_date}"
+                        data-end="${suggestion.end_date}">
+                        ${suggestion.start_date} ～ ${suggestion.end_date}
+                        (${suggestion.days}日間)
+                    </button>`;
+        });
+        
+        html += '</div></div>';
+        
+        $(`.cart-item[data-item-id="${itemId}"] .conflict-resolution`).html(html);
+    }
+
+    // 日程提案の選択
+    $(document).on('click', '.suggestion-item', function() {
+        const itemId = $(this).data('item-id');
+        const startDate = $(this).data('start');
+        const endDate = $(this).data('end');
+        
+        updateCartItem(itemId, {
+            start_date: startDate,
+            end_date: endDate
+        });
+    });
+
+    // レスポンシブ対応
+    function adjustCartLayout() {
+        if ($(window).width() < 768) {
+            $('.cart-summary').removeClass('sticky-top');
+        } else {
+            $('.cart-summary').addClass('sticky-top');
+        }
+    }
+
+    $(window).on('resize', adjustCartLayout);
+    adjustCartLayout();
+
+    // ローディング表示/非表示
+    function showLoading() {
+        $('.loading-overlay').show();
+    }
+
+    function hideLoading() {
+        $('.loading-overlay').hide();
+    }
+
+    // メッセージ表示
+    function showSuccessMessage(message) {
+        const alert = `<div class="alert alert-success alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        $('#message-container').html(alert);
+    }
+
+    function showErrorMessage(message) {
+        const alert = `<div class="alert alert-danger alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        $('#message-container').html(alert);
+    }
+});
+</script>
+{% endblock %}
+
+{% block main %}
+<div class="ec-cartRole">
+    <div class="ec-pageHeader">
+        <h1>レンタルカート</h1>
+    </div>
+
+    <!-- メッセージエリア -->
+    <div id="message-container"></div>
+
+    {% if cart_items|length > 0 %}
+    <div class="ec-cartRole__progress">
+        <ul class="ec-progress">
+            <li class="ec-progress__item is-active">カート</li>
+            <li class="ec-progress__item">注文内容確認</li>
+            <li class="ec-progress__item">決済</li>
+            <li class="ec-progress__item">完了</li>
+        </ul>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- カートアイテム一覧 -->
+            {% for item in cart_items %}
+            <div class="cart-item {% if conflicts[item.id] is defined %}conflict{% endif %}" data-item-id="{{ item.id }}">
+                
+                {% if conflicts[item.id] is defined %}
+                <div class="conflict-message">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    {{ conflicts[item.id].message }}
+                </div>
+                {% endif %}
+
+                <div class="row align-items-center">
+                    <!-- 商品画像 -->
+                    <div class="col-md-2">
+                        {% if item.product.ProductImage|length > 0 %}
+                            <img src="{{ asset(item.product.ProductImage[0], 'save_image') }}" 
+                                 alt="{{ item.product.name }}" 
+                                 class="img-fluid">
+                        {% else %}
+                            <img src="{{ asset('assets/img/common/no_image_product.png') }}" 
+                                 alt="{{ item.product.name }}" 
+                                 class="img-fluid">
+                        {% endif %}
+                    </div>
+
+                    <!-- 商品情報 -->
+                    <div class="col-md-4">
+                        <h6>{{ item.product.name }}</h6>
+                        <small class="text-muted">
+                            日額: ¥{{ item.dailyRate|number_format }}
+                        </small>
+                        {% if item.selectedOptions %}
+                            <div class="mt-1">
+                                {% for option in item.selectedOptions %}
+                                    <span class="badge bg-secondary">{{ option.label }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- レンタル期間 -->
+                    <div class="col-md-3">
+                        <div class="date-control">
+                            <div>
+                                <label class="form-label small">開始日</label>
+                                <input type="date" class="form-control form-control-sm date-input start-date" 
+                                       value="{{ item.rentalStartDate|date('Y-m-d') }}"
+                                       data-item-id="{{ item.id }}"
+                                       min="{{ 'today'|date('Y-m-d') }}">
+                            </div>
+                            <div>
+                                <label class="form-label small">終了日</label>
+                                <input type="date" class="form-control form-control-sm date-input end-date" 
+                                       value="{{ item.rentalEndDate|date('Y-m-d') }}"
+                                       data-item-id="{{ item.id }}"
+                                       min="{{ item.rentalStartDate|date('Y-m-d') }}">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            期間: {{ item.rentalDays }}日間
+                        </small>
+                    </div>
+
+                    <!-- 数量・金額 -->
+                    <div class="col-md-2">
+                        <div class="quantity-control mb-2">
+                            <label class="form-label small">数量</label>
+                            <input type="number" class="form-control form-control-sm quantity-input" 
+                                   value="{{ item.quantity }}"
+                                   min="1" max="99"
+                                   data-item-id="{{ item.id }}">
+                        </div>
+                        <div class="price-display">
+                            ¥{{ item.totalAmount|number_format }}
+                        </div>
+                    </div>
+
+                    <!-- 操作ボタン -->
+                    <div class="col-md-1">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-item-btn" 
+                                data-item-id="{{ item.id }}"
+                                title="削除">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 競合解決オプション -->
+                {% if conflicts[item.id] is defined %}
+                <div class="conflict-resolution mt-3">
+                    <h6>解決方法を選択してください：</h6>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary resolve-conflict-btn"
+                                data-item-id="{{ item.id }}"
+                                data-resolution="suggest_dates">
+                            代替日程を提案
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning resolve-conflict-btn"
+                                data-item-id="{{ item.id }}"
+                                data-resolution="reduce_quantity">
+                            数量を調整
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger resolve-conflict-btn"
+                                data-item-id="{{ item.id }}"
+                                data-resolution="remove">
+                            カートから削除
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <!-- カート操作 -->
+            <div class="cart-actions mt-4">
+                <div class="row">
+                    <div class="col-md-6">
+                        <a href="{{ url('rental_product_list') }}" class="btn btn-outline-secondary">
+                            <i class="fa fa-arrow-left"></i> 買い物を続ける
+                        </a>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button type="button" class="btn btn-outline-danger clear-cart-btn">
+                            <i class="fa fa-trash"></i> カートを空にする
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- カート合計 -->
+            <div class="cart-summary">
+                <h5><i class="fa fa-calculator"></i> お会計</h5>
+                
+                <table class="table table-sm">
+                    <tr>
+                        <td>商品数</td>
+                        <td class="text-end">{{ cart_items|length }}点</td>
+                    </tr>
+                    <tr>
+                        <td>小計</td>
+                        <td class="text-end">¥{{ cart_summary.subtotal|number_format }}</td>
+                    </tr>
+                    {% if cart_summary.depositTotal > 0 %}
+                    <tr>
+                        <td>保証金合計</td>
+                        <td class="text-end">¥{{ cart_summary.depositTotal|number_format }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>消費税</td>
+                        <td class="text-end">¥{{ cart_summary.tax|number_format }}</td>
+                    </tr>
+                    <tr class="table-active">
+                        <th>合計</th>
+                        <th class="text-end total-price">¥{{ cart_summary.total|number_format }}</th>
+                    </tr>
+                </table>
+
+                <div class="d-grid gap-2 mt-3">
+                    {% if conflicts|length == 0 %}
+                        <a href="{{ url('rental_order_input') }}" class="btn btn-primary btn-lg">
+                            <i class="fa fa-arrow-right"></i> ご注文手続きへ
+                        </a>
+                    {% else %}
+                        <button type="button" class="btn btn-primary btn-lg" disabled title="競合を解決してください">
+                            <i class="fa fa-exclamation-triangle"></i> 競合を解決してください
+                        </button>
+                    {% endif %}
+                </div>
+
+                <!-- カート保存期間の表示 -->
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fa fa-info-circle"></i>
+                        カート内容は7日間保存されます
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- 空のカート -->
+    <div class="empty-cart">
+        <i class="fa fa-shopping-cart fa-3x text-muted mb-3"></i>
+        <h4>カートが空です</h4>
+        <p class="text-muted">レンタルしたい商品をカートに追加してください。</p>
+        <a href="{{ url('rental_product_list') }}" class="btn btn-primary">
+            <i class="fa fa-search"></i> 商品を探す
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ローディングオーバーレイ -->
+<div class="loading-overlay">
+    <div class="spinner-border text-light" role="status">
+        <span class="visually-hidden">処理中...</span>
+    </div>
+</div>
+{% endblock %}
